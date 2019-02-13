@@ -1,5 +1,5 @@
 -- Inf2d Assignment 1 2018-2019
--- Matriculation number:
+-- Matriculation number: s1756255
 -- {-# OPTIONS -Wall #-}
 
 
@@ -56,7 +56,7 @@ type Branch = [(Int,Int)]
 
 badNodesList::[Node]
 -- This is your list of bad nodes. You should experimet with it to make sure your algorithm covers different cases.
-badNodesList = [(6,4),(5,5)]
+badNodesList = [(6,5),(5,6)]
 
 -- The maximum depth this search can reach
 -- TODO: Fill in the maximum depth and justify your choice
@@ -160,9 +160,9 @@ iterDeepSearch:: Node-> (Branch -> [Branch])->Node -> Int-> Maybe Branch
 iterDeepSearch destination next initialNode d
     | d > maxDepth = Nothing  -- No solution under maxDepth
     | depthLimitedSearch destination next [[initialNode]] d == Nothing
-      = depthLimitedSearch destination next [[initialNode]] (d+1)  -- no solution, depth + 1
-    | otherwise
-      = depthLimitedSearch destination next [[initialNode]] d  -- return a solution
+      = iterDeepSearch destination next initialNode (d+1)  -- no solution, depth + 1
+    | otherwise  -- find a solution, return it
+      = depthLimitedSearch destination next [[initialNode]] d
 
 -- | Section 4: Informed search
 
@@ -225,7 +225,7 @@ aStarSearch destination next heuristic cost branches exploredList
 
 -- | The cost function calculates the current cost of a trace, where each movement from one state to another has a cost of 1.
 cost :: Branch  -> Int
-cost branch = length branch - 1
+cost branch = length branch - 1  --for n nodes, it takes n-1 steps to reach the goal
 
 
 -- | Section 5: Games
@@ -243,21 +243,25 @@ cost branch = length branch - 1
 
 eval :: Game -> Int
 -- simply checks if player 1 has won, and if so returns 1, else check for player 0 and if so returns -1, else returns 0 as draw
-eval game =undefined
+eval game | checkWin game humanPlayer = 1
+          | checkWin game compPlayer = -1
+          | otherwise = 0
 
 -- | The minimax function should return the minimax value of the state (without alphabeta pruning).
 -- The eval function should be used to get the value of a terminal state.
 
 minimax:: Game->Player->Int
-minimax game player =undefined
+-- based on psuedocode
+minimax game player | player == humanPlayer = maxValue game
+                    | otherwise = minValue game
 
 
 -- | The alphabeta function should return the minimax value using alphabeta pruning.
 -- The eval function should be used to get the value of a terminal state.
 
 alphabeta:: Game->Player->Int
-alphabeta game player =undefined
-
+alphabeta game player = abMaxValue game (-2) 2
+-- initial setting: alpha = -2, beta = 2
 
 -- | Section 5.2 Wild Tic Tac Toe
 
@@ -305,3 +309,42 @@ isValid:: Node -> Bool
 isValid (x,y) = and [x > 0, x <= gridLength_search,
                     y > 0, y <= gridWidth_search,
                     notElem (x,y) badNodesList]
+
+maxValue:: Game -> Int
+maxValue game | terminal game = eval game  -- return utility value if is a terminal
+              | otherwise = maximum successors  -- find the max value of next states
+              where
+                successors = map minValue (moves game 1)  --Max is humanPlayer, so player is 1
+
+minValue::Game -> Int
+minValue game | terminal game = eval game  -- return utility value if is a terminal
+              | otherwise = minimum successors  -- find the max value of next states
+              where
+                successors = map maxValue (moves game 0)  -- same, min is computer so player is 0
+
+------------------Alpha Beta pruning----------------------------
+abMaxValue::Game -> Int -> Int -> Int
+abMaxValue game alpha beta -- | terminal game = eval game
+                           | otherwise = loopMax successors (-2) alpha beta
+                           where successors = moves game 1
+
+loopMax:: [Game] -> Int -> Int -> Int -> Int
+loopMax [] v _ _ = v
+loopMax (x:xs) v alpha beta | terminal x = eval x
+                            | v >= beta = v
+                            | otherwise = loopMax xs v' (max v' alpha) beta
+                            where
+                            v' = max v (abMinValue x alpha beta)
+
+abMinValue::Game -> Int -> Int -> Int
+abMinValue game alpha beta -- | terminal game = eval game
+                           | otherwise = loopMin successors (2) alpha beta
+                           where successors = moves game 0
+
+loopMin:: [Game] -> Int -> Int -> Int -> Int
+loopMin [] v _ _ = v
+loopMin (x:xs) v alpha beta | terminal x = eval x
+                            | v <= alpha = v
+                            | otherwise = loopMin xs v' alpha (min v' beta)
+                            where
+                            v' = min v (abMaxValue x alpha beta)
