@@ -275,7 +275,9 @@ alphabeta game player = abMaxValue game (-2) 2
 
 evalWild :: Game -> Int
 -- simply gives the player who reached(!) the terminal state +1  if either the x's or the o's are in the correct position.
-evalWild game =undefined
+evalWild game | checkWin game 1 = 1
+              | checkWin game 0 = 1
+              | otherwise = 0
 
 
 
@@ -285,7 +287,7 @@ evalWild game =undefined
 -- If the min player sent the game into a terminal state you should give -1 reward.
 
 alphabetaWild:: Game->Player->Int
-alphabetaWild game player =undefined
+alphabetaWild game player = wildMax game (-2) 2
 
 
 
@@ -348,3 +350,30 @@ loopMin (x:xs) v alpha beta | terminal x = eval x
                             | otherwise = loopMin xs v' alpha (min v' beta)
                             where
                             v' = min v (abMaxValue x alpha beta)
+
+---------------------WildTTT-----------------------------------------
+wildMax::Game -> Int -> Int -> Int
+wildMax game alpha beta -- | terminal game = eval game
+                           | otherwise = loopMaxW successors (-2) alpha beta
+                           where successors = movesWild game 1
+
+loopMaxW:: [Game] -> Int -> Int -> Int -> Int
+loopMaxW [] v _ _ = v
+loopMaxW (x:xs) v alpha beta | terminal x = evalWild x
+                            | v >= beta = v
+                            | otherwise = loopMaxW xs v' (max v' alpha) beta
+                            where
+                            v' = max v (wildMin x alpha beta)
+
+wildMin::Game -> Int -> Int -> Int
+wildMin game alpha beta -- | terminal game = eval game
+                           | otherwise = loopMinW successors (2) alpha beta
+                           where successors = movesWild game 0
+
+loopMinW:: [Game] -> Int -> Int -> Int -> Int
+loopMinW [] v _ _ = v
+loopMinW (x:xs) v alpha beta | terminal x = -(evalWild x)
+                            | v <= alpha = v
+                            | otherwise = loopMinW xs v' alpha (min v' beta)
+                            where
+                            v' = min v (wildMax x alpha beta)
