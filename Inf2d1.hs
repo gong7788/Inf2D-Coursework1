@@ -298,7 +298,7 @@ alphabetaWild game player = wildMax game (-2) 2
 -- The evalWild function should be used to get the value of a terminal state.
 
 minimaxWild:: Game->Player->Int
-minimaxWild game player =undefined
+minimaxWild game player = maxValueW game
 
 
 
@@ -326,26 +326,26 @@ minValue game | terminal game = eval game  -- return utility value if is a termi
 
 ------------------Alpha Beta pruning----------------------------
 abMaxValue::Game -> Int -> Int -> Int
-abMaxValue game alpha beta -- | terminal game = eval game
+abMaxValue game alpha beta | terminal game = eval game
                            | otherwise = loopMax successors (-2) alpha beta
                            where successors = moves game 1
 
 loopMax:: [Game] -> Int -> Int -> Int -> Int
 loopMax [] v _ _ = v
-loopMax (x:xs) v alpha beta | terminal x = eval x
+loopMax (x:xs) v alpha beta -- | terminal x = eval x
                             | v >= beta = v
                             | otherwise = loopMax xs v' (max v' alpha) beta
                             where
                             v' = max v (abMinValue x alpha beta)
 
 abMinValue::Game -> Int -> Int -> Int
-abMinValue game alpha beta -- | terminal game = eval game
+abMinValue game alpha beta  | terminal game = eval game
                            | otherwise = loopMin successors (2) alpha beta
                            where successors = moves game 0
 
 loopMin:: [Game] -> Int -> Int -> Int -> Int
 loopMin [] v _ _ = v
-loopMin (x:xs) v alpha beta | terminal x = eval x
+loopMin (x:xs) v alpha beta -- | terminal x = eval x
                             | v <= alpha = v
                             | otherwise = loopMin xs v' alpha (min v' beta)
                             where
@@ -353,27 +353,41 @@ loopMin (x:xs) v alpha beta | terminal x = eval x
 
 ---------------------WildTTT-----------------------------------------
 wildMax::Game -> Int -> Int -> Int
-wildMax game alpha beta -- | terminal game = eval game
+wildMax game alpha beta     | terminal game = - evalWild game
                            | otherwise = loopMaxW successors (-2) alpha beta
-                           where successors = movesWild game 1
+                           where successors = movesWild game humanPlayer
 
 loopMaxW:: [Game] -> Int -> Int -> Int -> Int
 loopMaxW [] v _ _ = v
-loopMaxW (x:xs) v alpha beta | terminal x = evalWild x
+loopMaxW (x:xs) v alpha beta  -- | terminal x = evalWild x
                             | v >= beta = v
                             | otherwise = loopMaxW xs v' (max v' alpha) beta
                             where
                             v' = max v (wildMin x alpha beta)
 
 wildMin::Game -> Int -> Int -> Int
-wildMin game alpha beta -- | terminal game = eval game
+wildMin game alpha beta     | terminal game = (evalWild game)
                            | otherwise = loopMinW successors (2) alpha beta
-                           where successors = movesWild game 0
+                           where successors = movesWild game compPlayer
 
 loopMinW:: [Game] -> Int -> Int -> Int -> Int
 loopMinW [] v _ _ = v
-loopMinW (x:xs) v alpha beta | terminal x = -(evalWild x)
+loopMinW (x:xs) v alpha beta -- | terminal x = - evalWild x   --加入组内循环？
                             | v <= alpha = v
                             | otherwise = loopMinW xs v' alpha (min v' beta)
                             where
                             v' = min v (wildMax x alpha beta)
+
+
+
+maxValueW:: Game -> Int
+maxValueW game | terminal game = - eval game  -- return utility value if is a terminal
+              | otherwise = maximum successors  -- find the max value of next states
+              where
+              successors = map minValue (movesWild game 1)  --Max is humanPlayer, so player is 1
+
+minValueW::Game -> Int
+minValueW game | terminal game = eval game  -- return utility value if is a terminal
+              | otherwise = minimum successors  -- find the max value of next states
+              where
+              successors = map maxValue (movesWild game 0)
